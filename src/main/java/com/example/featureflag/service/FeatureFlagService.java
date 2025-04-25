@@ -2,51 +2,51 @@ package com.example.featureflag.service;
 
 import com.example.featureflag.model.FeatureFlag;
 import com.example.featureflag.repository.FeatureFlagRepository;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.featureflag.utils.EnvUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class FeatureFlagService {
 
-    @Value("${spring.profiles.active:ALL}")
-    private String activeEnv;
+    private final FeatureFlagRepository repository;
+    private final String activeEnv;
 
-    private final FeatureFlagRepository repo;
-
-    public FeatureFlagService(FeatureFlagRepository repo) {
-        this.repo = repo;
+    public FeatureFlagService(FeatureFlagRepository repository, EnvUtils envUtils) {
+        this.repository = repository;
+        this.activeEnv = envUtils.getActiveProfile();
     }
 
     public boolean isEnabled(String flagName) {
-        return repo.findByNameAndEnvironment(flagName, activeEnv)
-                .or(() -> repo.findByNameAndEnvironment(flagName, "ALL"))
+        return repository.findByName(flagName).stream()
+                .filter(flag -> flag.getEnvironmentList().contains(activeEnv))
+                .findFirst()
                 .map(FeatureFlag::getEnabled)
                 .orElse(false);
     }
 
     public List<FeatureFlag> listFlags() {
-        return repo.findByEnvironment(activeEnv);
-    }
-
-    public void updateFlag(String flagName, boolean enabled) {
-        repo.findByNameAndEnvironment(flagName, activeEnv)
-                .ifPresent(flag -> {
-                    flag.setEnabled(enabled);
-                    repo.save(flag);
-                });
+        return repository.findByEnvironmentsContaining(activeEnv);
     }
 
     public void addFlag(FeatureFlag flag) {
-        Optional<FeatureFlag> existing = repo.findByNameAndEnvironment(flag.getName(), flag.getEnvironment());
-        if (existing.isEmpty()) {
-            repo.save(flag);
+        boolean exists = repository.findByName(flag.getName()).stream()
+                .anyMatch(f -> f.getEnvironmentList().stream().anyMatch(env -> flag.getEnvironmentList().contains(env)));
+        if (!exists) {
+            repository.save(flag);
         } else {
-            throw new IllegalArgumentException("Feature flag already exists for this environment.");
+            throw new IllegalArgumentException("Feature flag already exists for one or more specified environments.");
         }
     }
 
+    public void updateFlag(String name, boolean enabled) {
+        repository.findByName(name).stream()
+                .filter(flag -> flag.getEnvironmentList().contains(activeEnv))
+                .findFirst()
+                .ifPresent(flag -> {
+                    flag.setEnabled(enabled);
+                    repository.save(flag);
+                });
+    }
 }
-

@@ -19,9 +19,9 @@ public class FeatureFlagInitializer {
     @PostConstruct
     public void initFlags() {
         List<FeatureFlag> initialFlags = List.of(
-                new FeatureFlag(null, "enable-stripe", false, "QA"),
-                new FeatureFlag(null, "enable-fpt", true, "ALL"),
-                new FeatureFlag(null, "enable-discounts", true, "QA")
+                new FeatureFlag(null, "enable-stripe", false, "qa,int,stage,local"),
+                new FeatureFlag(null, "enable-fpt", true, "local"),
+                new FeatureFlag(null, "enable-discounts", true, "qa,int,stage,local")
         );
 
         for (FeatureFlag flag : initialFlags) {

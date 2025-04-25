@@ -1,5 +1,7 @@
 package com.example.featureflag.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonValueInstantiator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +22,20 @@ public class FeatureFlag {
 
     private String name;
     private Boolean enabled;
-    private String environment;
+
+    @JsonIgnore
+    private String environments;
+
+    @Transient
+    public List<String> getEnvironmentList() {
+        return environments != null ? List.of(environments.split(",")) : List.of();
+    }
+
+    @Transient
+    public void setEnvironmentList(List<String> envs) {
+        this.environments = String.join(",", envs);
+    }
+
+
 }
 
